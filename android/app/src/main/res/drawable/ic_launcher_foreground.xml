@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App icon: a wallet, kept inside the 66dp safe zone of the adaptive icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Note sticking out of the wallet -->
+    <path android:fillColor="#9CC5FF" android:pathData="M37,41l24,-11a3,3 0 0 1 4,1.5l4,9.5z" />
+    <!-- Wallet body -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M37,40h35a6,6 0 0 1 6,6v22a6,6 0 0 1 -6,6h-35a6,6 0 0 1 -6,-6v-22a6,6 0 0 1 6,-6z" />
+    <!-- Clasp -->
+    <path android:fillColor="#F08A5D"
+        android:pathData="M62,51h16v12h-16a6,6 0 0 1 0,-12z" />
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M64.5,57m-2.5,0a2.5,2.5 0 1 1 5,0a2.5,2.5 0 1 1 -5,0" />
+</vector>

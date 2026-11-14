@@ -1,0 +1,10 @@
+# Build context for deploy/web.Dockerfile (repository root): only the dashboard
+# sources and the Caddyfile are needed.
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+android
+backend
+.git
+docs

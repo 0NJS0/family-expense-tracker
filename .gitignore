@@ -1,0 +1,72 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.env
+!*.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+id_rsa*
+id_ed25519*
+credentials*.json
+service-account*.json
+*.bak
+*.orig
+
+# Logs and test output
+*.log
+logs/
+coverage/
+test-results/
+playwright-report/
+*.png.tmp
+dashboard/e2e/screenshots/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Data that must never be committed
+*.sql.gz
+*.dump
+backups/
+receipts/
+storage/
+var/
+
+# Android / build outputs
+*.apk
+*.aab
+*.jks
+*.keystore
+keystore.properties
+build/
+.gradle/
+local.properties
+.kotlin/
+*.iml
+captures/
+.cxx/
+
+# Node
+node_modules/
+dist/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*~

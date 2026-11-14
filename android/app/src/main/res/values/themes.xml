@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AppCompat parent: required for the per-app language switch. Compose draws the UI. -->
+    <style name="Theme.FamilyExpenses" parent="Theme.AppCompat.DayNight.NoActionBar" />
+</resources>

@@ -1,0 +1,118 @@
+# Family expenses on the homelab. See docs/deployment.md.
+#
+#   cp deploy/.env.example deploy/.env   # then fill it in (never commit it)
+#   docker compose -f deploy/compose.yaml --env-file deploy/.env up -d --build
+#
+# The database is the homelab's existing PostgreSQL 18 (deploy/setup-database.sql).
+name: family-expenses
+
+x-backend: &backend
+  build:
+    context: ../backend
+    dockerfile: Dockerfile
+  image: family-expenses-backend:local
+  env_file: .env
+  extra_hosts:
+    # Lets containers reach the homelab's own PostgreSQL as "host.docker.internal".
+    - "host.docker.internal:host-gateway"
+  read_only: true
+  tmpfs:
+    - /tmp
+  security_opt:
+    - no-new-privileges:true
+  cap_drop: [ALL]
+  networks: [app]
+  restart: unless-stopped
+
+services:
+  # Applies database migrations, then exits. The API and worker wait for it.
+  migrate:
+    <<: *backend
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+
+  api:
+    <<: *backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ${RECEIPTS_DIR:?set RECEIPTS_DIR in deploy/.env}:/data/receipts
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/ready', timeout=4).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # Slow jobs: receipt OCR and AI summaries (ADR 0005).
+  worker:
+    <<: *backend
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ${RECEIPTS_DIR}:/data/receipts
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+    image: family-expenses-web:local
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      # Only on the homelab's home-network address (not on every address, which
+      # would include a public IPv6 one). The phone app and browser use
+      # http://${WEB_BIND}:${WEB_PORT}, at home and through the VPN.
+      - "${WEB_BIND:?set WEB_BIND in deploy/.env}:${WEB_PORT:?set WEB_PORT in deploy/.env}:80"
+    read_only: true
+    tmpfs:
+      - /config
+      - /data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    networks: [app]
+    restart: unless-stopped
+
+  # Daily database and receipt backups, kept 14 days and 12 months.
+  backup:
+    image: postgres:18-alpine
+    # Only what the backup needs; not the app's secrets.
+    environment:
+      TZ: Asia/Dhaka
+      BACKUP_DATABASE_URL: ${BACKUP_DATABASE_URL:?set BACKUP_DATABASE_URL in deploy/.env}
+      # Kept out of the URL so it never appears on a command line.
+      PGPASSWORD: ${BACKUP_DATABASE_PASSWORD:?set BACKUP_DATABASE_PASSWORD in deploy/.env}
+      BACKUP_TIME: ${BACKUP_TIME:-02:30}
+      BACKUP_KEEP_DAILY: ${BACKUP_KEEP_DAILY:-14}
+      BACKUP_KEEP_MONTHLY: ${BACKUP_KEEP_MONTHLY:-12}
+    entrypoint: ["/bin/sh", "/backup/backup.sh", "--daemon"]
+    volumes:
+      - ./backup:/backup:ro
+      - ${BACKUP_DIR:?set BACKUP_DIR in deploy/.env}:/backups
+      - ${RECEIPTS_DIR}:/receipts:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    # Receipt folders are private to the app user (mode 0700); reading them for
+    # the backup needs this one read-only capability, nothing more.
+    cap_add: [DAC_READ_SEARCH]
+    networks: [app]
+    restart: unless-stopped
+
+networks:
+  app:
+    # A fixed range, so PostgreSQL's pg_hba.conf can allow exactly this network.
+    ipam:
+      config:
+        - subnet: ${APP_SUBNET:-172.30.250.0/24}
